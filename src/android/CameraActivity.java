@@ -1,54 +1,35 @@
 package com.cordovaplugincamerapreview;
 
-import android.app.Activity;
-import android.content.pm.ActivityInfo;
 import android.app.Fragment;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.Bitmap.CompressFormat;
-import android.util.Base64;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Rect;
-import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.ShutterCallback;
 import android.os.Bundle;
+import android.util.Base64;
 import android.util.Log;
-import android.util.DisplayMetrics;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
-import android.view.Surface;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
-import org.apache.cordova.LOG;
-
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.lang.Exception;
-import java.lang.Integer;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 public class CameraActivity extends Fragment {
 
   public interface CameraPreviewListener {
     void onPictureTaken(String originalPicture);
-    void onPictureTakenError(String message);
   }
 
   private CameraPreviewListener eventListener;
@@ -211,7 +192,9 @@ public class CameraActivity extends Fragment {
   public void onResume() {
     super.onResume();
 
-    mCamera = Camera.open(defaultCameraId);
+    if (mCamera == null) {
+      mCamera = Camera.open(defaultCameraId);
+    }
 
     if (cameraParameters != null) {
       mCamera.setParameters(cameraParameters);
@@ -349,27 +332,21 @@ public class CameraActivity extends Fragment {
 
   PictureCallback jpegPictureCallback = new PictureCallback(){
     public void onPictureTaken(byte[] data, Camera arg1){
-      Log.d(TAG, "CameraPreview jpegPictureCallback");
+      Log.d(TAG, "CameraPreview onPictureTaken");
       Camera.Parameters params = mCamera.getParameters();
       try {
         Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0,data.length);
         bitmap = rotateBitmap(bitmap, mPreview.getDisplayOrientation(), cameraCurrentlyLocked == Camera.CameraInfo.CAMERA_FACING_FRONT);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.JPEG, params.getJpegQuality(), outputStream);
+	bitmap.compress(Bitmap.CompressFormat.JPEG, params.getJpegQuality(), outputStream);
         byte[] byteArray = outputStream.toByteArray();
         String encodedImage = Base64.encodeToString(byteArray, Base64.NO_WRAP);
         eventListener.onPictureTaken(encodedImage);
-        Log.d(TAG, "CameraPreview pictureTakenHandler called back");
-      } catch (OutOfMemoryError e) {
-        // most likely failed to allocate memory for rotateBitmap
-        Log.d(TAG, "CameraPreview OutOfMemoryError");
-        // failed to allocate memory
-        eventListener.onPictureTakenError("Picture too large (memory)");
-      } catch (Exception e) {
-        Log.d(TAG, "CameraPreview onPictureTaken general exception");
-      } finally {
         canTakePicture = true;
-        mCamera.startPreview();
+        Log.d(TAG, "CameraPreview pictureTakenHandler called back");
+      } catch (Exception e) {
+        Log.d(TAG, "CameraPreview exception");
+        e.printStackTrace();
       }
     }
   };

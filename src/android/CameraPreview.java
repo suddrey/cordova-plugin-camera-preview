@@ -239,11 +239,6 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     takePictureCallbackContext.sendPluginResult(pluginResult);
   }
 
-  public void onPictureTakenError(String message) {
-    Log.d(TAG, "CameraPreview onPictureTakenError");
-    takePictureCallbackContext.error(message);
-  }
-
   private boolean setColorEffect(final JSONArray args, CallbackContext callbackContext) {
     if(fragment == null){
       callbackContext.error("No preview");
@@ -428,6 +423,8 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     fragmentTransaction.show(fragment);
     fragmentTransaction.commit();
 
+    fragment.onResume();
+
     callbackContext.success();
     return true;
   }
@@ -435,6 +432,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     if(fragment == null) {
       callbackContext.error("No preview");
       return false;
+    }
+
+    if (fragment.isHidden()) {
+      callbackContext.success();
+      return true;
     }
 
     FragmentManager fragmentManager = cordova.getActivity().getFragmentManager();
